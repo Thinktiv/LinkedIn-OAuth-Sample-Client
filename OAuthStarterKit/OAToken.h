@@ -51,7 +51,7 @@
           session:(NSString *)aSession
          verifier:(NSString *)aVerifier
 		 duration:(NSNumber *)aDuration 
-       attributes:(NSMutableDictionary *)theAttributes 
+       attributes:(NSDictionary *)theAttributes 
           created:(NSDate *)creation
 		renewable:(BOOL)renew;
 
@@ -72,7 +72,7 @@
 - (void)setDurationWithString:(NSString *)aDuration;
 - (void)setVerifierWithUrl:(NSURL *)aURL;
 - (BOOL)hasAttributes;
-- (NSMutableDictionary *)parameters;
+- (NSDictionary *)parameters;
 
 - (BOOL)isEqualToToken:(OAToken *)aToken;
 

@@ -51,21 +51,22 @@
 				 realm:(const NSString *)aRealm callback:(const NSString *)aCallback
 			  delegate:(NSObject <OATokenManagerDelegate> *)aDelegate {
 
-	[super init];
-	consumer = [aConsumer retain];
-	acToken = nil;
-	reqToken = nil;
-	initialToken = [aToken retain];
-	authorizedTokenKey = nil;
-	oauthBase = [base copy];
-	realm = [aRealm copy];
-	callback = [aCallback copy];
-	delegate = aDelegate;
-	calls = [[NSMutableArray alloc] init];
-	selectors = [[NSMutableArray alloc] init];
-	delegates = [[NSMutableDictionary alloc] init];
-	isDispatching = NO;
-
+	self = [super init];
+    if (self) {
+        consumer = [aConsumer retain];
+        acToken = nil;
+        reqToken = nil;
+        initialToken = [aToken retain];
+        authorizedTokenKey = nil;
+        oauthBase = [base copy];
+        realm = [aRealm copy];
+        callback = [aCallback copy];
+        delegate = aDelegate;
+        calls = [[NSMutableArray alloc] init];
+        selectors = [[NSMutableArray alloc] init];
+        delegates = [[NSMutableDictionary alloc] init];
+        isDispatching = NO;
+    }
 	return self;
 }
 
@@ -86,7 +87,7 @@
 
 // The application got a new authorized
 // request token and is notifying us
-- (void)authorizedToken:(const NSString *)aKey
+- (void)authorizedToken:(NSString *)aKey
 {
 	if (reqToken && [aKey isEqualToString:reqToken.key]) {
 		[self exchangeToken];
@@ -283,6 +284,7 @@
 {
 	OAToken *token = [[OAToken alloc] initWithHTTPResponseBody:body];
 	[self setAccessToken:token];
+    [token release];
 }
 
 - (void)renewToken {
@@ -366,9 +368,11 @@
 										 files:theFiles];
 	NSLog(@"Received request for: %@", aURL);
 	[self enqueue:call selector:didFinish];
+    [call release];
 	if (aDelegate) {
 		[delegates setObject:aDelegate forKey:[NSString stringWithFormat:@"%p", call]];
 	}
+    
 	[self dispatch];
 }
 

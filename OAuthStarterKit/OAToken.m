@@ -33,7 +33,7 @@
 + (id)loadSetting:(const NSString *)name provider:(const NSString *)provider prefix:(const NSString *)prefix;
 + (void)saveSetting:(NSString *)name object:(id)object provider:(const NSString *)provider prefix:(const NSString *)prefix;
 + (NSNumber *)durationWithString:(NSString *)aDuration;
-+ (NSMutableDictionary *)attributesWithString:(NSString *)theAttributes;
++ (NSDictionary *)attributesWithString:(NSString *)theAttributes;
 
 @end
 
@@ -57,21 +57,24 @@
           session:(NSString *)aSession
          verifier:(NSString *)aVerifier
 		 duration:(NSNumber *)aDuration 
-       attributes:(NSMutableDictionary *)theAttributes 
+       attributes:(NSDictionary *)theAttributes 
           created:(NSDate *)creation
 		renewable:(BOOL)renew 
 {
-	[super init];
+	self = [super init];
+    if (!self) {
+        return nil;
+    }
 	self.key = aKey;
 	self.secret = aSecret;
 	self.session = aSession;
     self.verifier = aVerifier;
 	self.duration = aDuration;
-	self.attributes = theAttributes;
+	self.attributes = [[[NSMutableDictionary alloc] initWithDictionary:theAttributes] autorelease];
 	created = [creation retain];
 	renewable = renew;
 	forRenewal = NO;
-
+    
 	return self;
 }
 
@@ -98,10 +101,10 @@
     NSString *aVerifier = nil;
 	NSNumber *aDuration = nil;
 	NSDate *creationDate = nil;
-	NSMutableDictionary *attrs = nil;
+	NSDictionary *attrs = nil;
 	BOOL renew = NO;
 	NSArray *pairs = [body componentsSeparatedByString:@"&"];
-
+    
 	for (NSString *pair in pairs) 
     {
         NSArray *elements = [pair componentsSeparatedByString:@"="];
@@ -150,7 +153,10 @@
 }
 
 - (id)initWithUserDefaultsUsingServiceProviderName:(const NSString *)provider prefix:(const NSString *)prefix {
-	[super init];
+	self = [super init];
+    if (!self) {
+        return nil;
+    }
 	self.key = [OAToken loadSetting:@"key" provider:provider prefix:prefix];
 	self.secret = [OAToken loadSetting:@"secret" provider:provider prefix:prefix];
 	self.session = [OAToken loadSetting:@"session" provider:provider prefix:prefix];
@@ -159,7 +165,7 @@
 	self.attributes = [OAToken loadSetting:@"attributes" provider:provider prefix:prefix];
 	created = [OAToken loadSetting:@"created" provider:provider prefix:prefix];
 	renewable = [[OAToken loadSetting:@"renewable" provider:provider prefix:prefix] boolValue];
-
+    
 	if (![self isValid]) {
 		[self autorelease];
 		return nil;
@@ -224,7 +230,7 @@
 	[attributes setObject: aAttribute forKey: aKey];
 }
 
-- (void)setAttributes:(NSMutableDictionary *)theAttributes {
+- (void)setAttributes:(NSDictionary *)theAttributes {
 	[attributes release];
 	if (theAttributes) {
 		attributes = [[NSMutableDictionary alloc] initWithDictionary:theAttributes];
@@ -232,6 +238,10 @@
 		attributes = nil;
 	}
 	
+}
+
+- (NSMutableDictionary *)attributes {
+    return attributes;
 }
 
 - (BOOL)hasAttributes {
@@ -259,13 +269,13 @@
 
 - (void)setAttributesWithString:(NSString *)theAttributes
 {
-	self.attributes = [[self class] attributesWithString:theAttributes];
+	self.attributes = [[[NSMutableDictionary alloc] initWithDictionary:[[self class] attributesWithString:theAttributes]] autorelease];
 }
 
-- (NSMutableDictionary *)parameters
+- (NSDictionary *)parameters
 {
 	NSMutableDictionary *params = [[[NSMutableDictionary alloc] init] autorelease];
-
+    
 	if (key) 
     {
 		[params setObject:key forKey:@"oauth_token"];
@@ -316,32 +326,32 @@
 	
 	return NO;
 }
-			
+
 #pragma mark class_functions
-			
+
 + (NSString *)settingsKey:(NSString *)name provider:(NSString *)provider prefix:(NSString *)prefix {
 	return [NSString stringWithFormat:@"OAUTH_%@_%@_%@", provider, prefix, [name uppercaseString]];
 }
-			
+
 + (id)loadSetting:(NSString *)name provider:(NSString *)provider prefix:(NSString *)prefix {
 	return [[NSUserDefaults standardUserDefaults] objectForKey:[self settingsKey:name
 																		provider:provider
 																		  prefix:prefix]];
 }
-			
+
 + (void)saveSetting:(NSString *)name object:(id)object provider:(NSString *)provider prefix:(NSString *)prefix {
 	[[NSUserDefaults standardUserDefaults] setObject:object forKey:[self settingsKey:name
 																			provider:provider
 																			  prefix:prefix]];
 }
-	
+
 + (void)removeFromUserDefaultsWithServiceProviderName:(NSString *)provider prefix:(NSString *)prefix {
 	NSArray *keys = [NSArray arrayWithObjects:@"key", @"secret", @"created", @"duration", @"session", @"verifier", @"attributes", @"renewable", nil];
 	for(NSString *name in keys) {
 		[[NSUserDefaults standardUserDefaults] removeObjectForKey:[OAToken settingsKey:name provider:provider prefix:prefix]];
 	}
 }
-			
+
 + (NSNumber *)durationWithString:(NSString *)aDuration {
 	NSUInteger length = [aDuration length];
 	unichar c = toupper([aDuration characterAtIndex:length - 1]);
@@ -368,7 +378,7 @@
 	return [NSNumber numberWithInt: mult * [[aDuration substringToIndex:length - 1] intValue]];
 }
 
-+ (NSMutableDictionary *)attributesWithString:(NSString *)theAttributes {
++ (NSDictionary *)attributesWithString:(NSString *)theAttributes {
 	NSArray *attrs = [theAttributes componentsSeparatedByString:@";"];
 	NSMutableDictionary *dct = [[NSMutableDictionary alloc] init];
 	for (NSString *pair in attrs) {

@@ -18,7 +18,7 @@
 {
     ProfileTabView *profileViewController = [[ProfileTabView alloc] initWithNibName:nil bundle:nil];
     self.window.rootViewController = profileViewController;
-    
+    [profileViewController release];
     [self.window makeKeyAndVisible];
     return YES;
 }

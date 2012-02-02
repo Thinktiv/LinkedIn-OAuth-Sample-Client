@@ -30,8 +30,10 @@
 @implementation OADataFetcher
 
 - (id)init {
-	[super init];
-	responseData = [[NSMutableData alloc] init];
+	self = [super init];
+    if (self) {
+        responseData = [[NSMutableData alloc] init];
+    }
 	return self;
 }
 
@@ -85,6 +87,11 @@
     [request prepare];
     
 	connection = [[NSURLConnection alloc] initWithRequest:aRequest delegate:self];
+}
+
+- (void)cancelRequest
+{
+    [connection cancel];
 }
 
 @end

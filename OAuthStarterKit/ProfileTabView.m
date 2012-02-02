@@ -74,8 +74,8 @@
 
     if ( profile )
     {
-        name.text = [[NSString alloc] initWithFormat:@"%@ %@",
-                     [profile objectForKey:@"firstName"], [profile objectForKey:@"lastName"]];
+        name.text = [[[NSString alloc] initWithFormat:@"%@ %@",
+                     [profile objectForKey:@"firstName"], [profile objectForKey:@"lastName"]] autorelease];
         headline.text = [profile objectForKey:@"headline"];
     }
     
@@ -162,9 +162,9 @@
                            signatureProvider:nil];
     
     NSDictionary *update = [[NSDictionary alloc] initWithObjectsAndKeys:
-                            [[NSDictionary alloc] 
+                            [[[NSDictionary alloc] 
                              initWithObjectsAndKeys:
-                             @"anyone",@"code",nil], @"visibility", 
+                             @"anyone",@"code",nil] autorelease], @"visibility", 
                             statusTextView.text, @"comment", nil];
     
     [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
@@ -172,6 +172,7 @@
     
     [request setHTTPBodyWithString:updateString];
 	[request setHTTPMethod:@"POST"];
+    [update release];
     
     OADataFetcher *fetcher = [[OADataFetcher alloc] init];
     [fetcher fetchDataWithRequest:request

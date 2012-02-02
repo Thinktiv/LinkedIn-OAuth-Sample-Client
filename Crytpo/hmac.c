@@ -29,6 +29,7 @@
  */
 
 #include "sha1.h"
+#include "hmac.h"
 
 #include <stdlib.h>
 #include <string.h>

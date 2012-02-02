@@ -31,11 +31,13 @@
 
 #pragma mark init
 
-- (id)initWithKey:(const NSString *)aKey secret:(const NSString *)aSecret realm:(const NSString *)aRealm {
-	[super init];
-	self.key = [aKey retain];
-	self.secret = [aSecret retain];
-    self.realm = [aRealm retain];
+- (id)initWithKey:(NSString *)aKey secret:(NSString *)aSecret realm:(NSString *)aRealm {
+	self = [super init];
+    if (self) {
+        self.key = [aKey retain];
+        self.secret = [aSecret retain];
+        self.realm = [aRealm retain];
+    }
 	return self;
 }
 
