@@ -8,121 +8,96 @@
 //
 #import <Foundation/NSNotificationQueue.h>
 #import "OAuthLoginView.h"
+#import "Defines.h"
+#import "AppDelegate.h"
+#import "Profile.h"
+#import "PublicInfo.h"
+#import "Skill.h"
+#import "Industry.h"
+#import "Experience.h"
+#import "Education.h"
+#import "PrivateInfoViewController.h"
+#import "LinkedInProfileParser.h"
+#import "LinkedInProfileUpdateManager.h"
 
-//
-// OAuth steps for version 1.0a:
-//
-//  1. Request a "request token"
-//  2. Show the user a browser with the LinkedIn login page
-//  3. LinkedIn redirects the browser to our callback URL
-//  4  Request an "access token"
-//
 @implementation OAuthLoginView
 
-@synthesize requestToken, accessToken, profile, consumer;
+@synthesize requestToken, accessToken, profileDict, profile, consumer;
 
-//
-// OAuth step 1a:
-//
-// The first step in the the OAuth process to make a request for a "request token".
-// Yes it's confusing that the work request is mentioned twice like that, but it is whats happening.
-//
+- (void)showConnectionErrorAlert
+{
+    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
+                                                        message:@"Please check your internet connection and try again" delegate:self 
+                                              cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    [alertView show];
+    [alertView release];
+}
+
+- (void)showProfileErrorAlert
+{
+    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
+                                                        message:@"We were unable to import your LinkedIn profile. Please check your internet connection and try again." delegate:self 
+                                              cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    [alertView show];
+    [alertView release];
+}
+
 - (void)requestTokenFromProvider
 {
     OAMutableURLRequest *request = 
-            [[[OAMutableURLRequest alloc] initWithURL:requestTokenURL
-                                             consumer:self.consumer
-                                                token:nil   
-                                             callback:linkedInCallbackURL
-                                    signatureProvider:nil] autorelease];
+    [[[OAMutableURLRequest alloc] initWithURL:requestTokenURL
+                                     consumer:consumer
+                                        token:nil   
+                                     callback:linkedInCallbackURL
+                            signatureProvider:nil] autorelease];
     
     [request setHTTPMethod:@"POST"];   
-    OADataFetcher *fetcher = [[[OADataFetcher alloc] init] autorelease];
-    [fetcher fetchDataWithRequest:request
-                         delegate:self
-                didFinishSelector:@selector(requestTokenResult:didFinish:)
-                  didFailSelector:@selector(requestTokenResult:didFail:)];    
+    requestTokenFetcher = [[OADataFetcher alloc] init];
+    [requestTokenFetcher fetchDataWithRequest:request
+                                     delegate:self
+                            didFinishSelector:@selector(requestTokenResult:didFinish:)
+                              didFailSelector:@selector(requestTokenResult:didFail:)];    
 }
 
-//
-// OAuth step 1b:
-//
-// When this method is called it means we have successfully received a request token.
-// We then show a webView that sends the user to the LinkedIn login page.
-// The request token is added as a parameter to the url of the login page.
-// LinkedIn reads the token on their end to know which app the user is granting access to.
-//
 - (void)requestTokenResult:(OAServiceTicket *)ticket didFinish:(NSData *)data 
 {
     if (ticket.didSucceed == NO) 
         return;
-        
+    
     NSString *responseBody = [[NSString alloc] initWithData:data
                                                    encoding:NSUTF8StringEncoding];
-    self.requestToken = [[OAToken alloc] initWithHTTPResponseBody:responseBody];
+    self.requestToken = [[[OAToken alloc] initWithHTTPResponseBody:responseBody] autorelease];
     [responseBody release];
+    
     [self allowUserToLogin];
 }
 
 - (void)requestTokenResult:(OAServiceTicket *)ticket didFail:(NSData *)error 
 {
     NSLog(@"%@",[error description]);
+    [self showConnectionErrorAlert];
 }
 
-//
-// OAuth step 2:
-//
-// Show the user a browser displaying the LinkedIn login page.
-// They type username/password and this is how they permit us to access their data
-// We use a UIWebView for this.
-//
-// Sending the token information is required, but in this one case OAuth requires us
-// to send URL query parameters instead of putting the token in the HTTP Authorization
-// header as we do in all other cases.
-//
 - (void)allowUserToLogin
 {
-    NSString *userLoginURLWithToken = [NSString stringWithFormat:@"%@?oauth_token=%@", 
-        userLoginURLString, self.requestToken.key];
+    NSString *userLoginURLWithToken = [NSString stringWithFormat:@"%@?oauth_token=%@&auth_token_secret=%@", 
+                                       userLoginURLString, self.requestToken.key, self.requestToken.secret];
     
     userLoginURL = [NSURL URLWithString:userLoginURLWithToken];
     NSURLRequest *request = [NSMutableURLRequest requestWithURL: userLoginURL];
     [webView loadRequest:request];     
 }
 
-
-//
-// OAuth step 3:
-//
-// This method is called when our webView browser loads a URL, this happens 3 times:
-//
-//      a) Our own [webView loadRequest] message sends the user to the LinkedIn login page.
-//
-//      b) The user types in their username/password and presses 'OK', this will submit
-//         their credentials to LinkedIn
-//
-//      c) LinkedIn responds to the submit request by redirecting the browser to our callback URL
-//         If the user approves they also add two parameters to the callback URL: oauth_token and oauth_verifier.
-//         If the user does not allow access the parameter user_refused is returned.
-//
-//      Example URLs for these three load events:
-//          a) https://www.linkedin.com/uas/oauth/authorize?oauth_token=<token value>
-//
-//          b) https://www.linkedin.com/uas/oauth/authorize/submit   OR
-//             https://www.linkedin.com/uas/oauth/authenticate?oauth_token=<token value>&trk=uas-continue
-//
-//          c) hdlinked://linkedin/oauth?oauth_token=<token value>&oauth_verifier=63600     OR
-//             hdlinked://linkedin/oauth?user_refused
-//             
-//
-//  We only need to handle case (c) to extract the oauth_verifier value
-//
 - (BOOL)webView:(UIWebView*)webView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType 
 {
 	NSURL *url = request.URL;
 	NSString *urlString = url.absoluteString;
     
-    addressBar.text = urlString;
+    if ([urlString isEqualToString:kLinkedInJoinUrlString]) {
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:kLinkedInJoinUrlString]];
+        return NO;
+    }
+    
     [activityIndicator startAnimating];
     
     BOOL requestForCallbackURL = ([urlString rangeOfString:linkedInCallbackURL].location != NSNotFound);
@@ -136,20 +111,10 @@
         }
         else
         {
-            // User refused to allow our app access
-            // Notify parent and close this view
-            [[NSNotificationCenter defaultCenter] 
-                    postNotificationName:@"loginViewDidFinish"        
-                                  object:self 
-                                userInfo:nil];
-
-            [self dismissModalViewControllerAnimated:YES];
+            [self.navigationController popViewControllerAnimated:YES];
         }
     }
-    else
-    {
-        // Case (a) or (b), so ignore it
-    }
+    
 	return YES;
 }
 
@@ -158,24 +123,21 @@
     [activityIndicator stopAnimating];
 }
 
-//
-// OAuth step 4:
-//
 - (void)accessTokenFromProvider
 { 
     OAMutableURLRequest *request = 
-            [[[OAMutableURLRequest alloc] initWithURL:accessTokenURL
-                                             consumer:self.consumer
-                                                token:self.requestToken   
-                                             callback:nil
-                                    signatureProvider:nil] autorelease];
+    [[[OAMutableURLRequest alloc] initWithURL:accessTokenURL
+                                     consumer:consumer
+                                        token:self.requestToken   
+                                     callback:nil
+                            signatureProvider:nil] autorelease];
     
     [request setHTTPMethod:@"POST"];
-    OADataFetcher *fetcher = [[[OADataFetcher alloc] init] autorelease];
-    [fetcher fetchDataWithRequest:request
-                         delegate:self
-                didFinishSelector:@selector(accessTokenResult:didFinish:)
-                  didFailSelector:@selector(accessTokenResult:didFail:)];    
+    accessTokenFetcher = [[OADataFetcher alloc] init];
+    [accessTokenFetcher fetchDataWithRequest:request
+                                    delegate:self
+                           didFinishSelector:@selector(accessTokenResult:didFinish:)
+                             didFailSelector:@selector(accessTokenResult:didFail:)];    
 }
 
 - (void)accessTokenResult:(OAServiceTicket *)ticket didFinish:(NSData *)data 
@@ -188,33 +150,70 @@
     {
         NSLog(@"Request access token failed.");
         NSLog(@"%@",responseBody);
+        [self showConnectionErrorAlert];
     }
     else
     {
-        self.accessToken = [[OAToken alloc] initWithHTTPResponseBody:responseBody];
+        self.accessToken = [[[OAToken alloc] initWithHTTPResponseBody:responseBody] autorelease];
+        [self linkedInProfileCall];
     }
-    // Notify parent and close this view
-    [[NSNotificationCenter defaultCenter] 
-     postNotificationName:@"loginViewDidFinish"        
-     object:self];
-    
-    [self dismissModalViewControllerAnimated:YES];
     [responseBody release];
 }
 
-//
-//  This api consumer data could move to a provider object
-//  to allow easy switching between LinkedIn, Twitter, etc.
-//
+- (void)accessTokenResult:(OAServiceTicket *)ticket didFail:(NSData *)error
+{
+    NSLog(@"%@",[error description]);
+    [self showConnectionErrorAlert];
+}
+
+- (void)showActivityOverlay
+{
+    if (!activityOverlayView.window) {
+        activityOverlayView.frame = [[UIScreen mainScreen] applicationFrame];
+        [self.navigationController.view addSubview:activityOverlayView];
+    }
+}
+
+- (void)hideActivityOverlay
+{
+    [activityOverlayView removeFromSuperview];
+}
+
+- (void)linkedInProfileCall
+{
+    [self showActivityOverlay];
+    
+    linkedInDataFetcher = [[LinkedInDataFetcher alloc] initWithConsumer:consumer accessToken:self.accessToken];
+    linkedInDataFetcher.delegate = self;
+    [linkedInDataFetcher requestProfile];
+}
+
+- (void)goToPrivateInfoWithProfile:(Profile *)aProfile
+{
+    PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
+    [self.navigationController pushViewController:pivc animated:YES];
+    [pivc release];
+}
+
+- (void)backButtonTapped:(id)sender {
+    [self.navigationController popToRootViewControllerAnimated:NO];
+    
+    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
+    UIWindow *currentWindow = self.view.window;
+    [UIView transitionWithView:currentWindow duration:0.5 options: UIViewAnimationOptionTransitionFlipFromRight animations:^{
+        currentWindow.rootViewController = appDelegate.tabBarController;
+    } completion:nil];
+}
+
 - (void)initLinkedInApi
 {
-    apikey = @"API_KEY";
-    secretkey = @"API_SECRET";   
-
-    self.consumer = [[OAConsumer alloc] initWithKey:apikey
+    apikey = @"pr8muxsq7t0z";
+    secretkey = @"NljvX8ge1CFsBSJY";   
+    
+    consumer = [[OAConsumer alloc] initWithKey:apikey
                                         secret:secretkey
                                          realm:@"http://api.linkedin.com/"];
-
+    
     requestTokenURLString = @"https://api.linkedin.com/uas/oauth/requestToken";
     accessTokenURLString = @"https://api.linkedin.com/uas/oauth/accessToken";
     userLoginURLString = @"https://www.linkedin.com/uas/oauth/authorize";    
@@ -229,44 +228,67 @@
 {
     [super viewDidLoad];
     [self initLinkedInApi];
-    [addressBar setContentVerticalAlignment:UIControlContentVerticalAlignmentCenter];
-    }
+    
+    [self.navigationController setNavigationBarHidden:NO]; 
+    
+    UIBarButtonItem *backButtonItem = [[UIBarButtonItem alloc] initWithCustomView:backButton];
+    [backButton addTarget:self action:@selector(backButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self navigationItem].leftBarButtonItem = backButtonItem;
+    [backButtonItem release];
+    
+    activityIndicator = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(0, 0, 20, 20)];
+    activityIndicator.hidesWhenStopped = YES;
+    UIBarButtonItem * activityIndicatorItem = [[UIBarButtonItem alloc] initWithCustomView:activityIndicator];
+    [self navigationItem].rightBarButtonItem = activityIndicatorItem;
+    [activityIndicatorItem release];
+}
 
 - (void)viewDidAppear:(BOOL)animated
 {
-    if ([apikey length] < 64 || [secretkey length] < 64)
-    {
-        UIAlertView *alert = [[UIAlertView alloc]
-                          initWithTitle: @"OAuth Starter Kit"
-                          message: @"You must add your apikey and secretkey.  See the project file readme.txt"
-                          delegate: nil
-                          cancelButtonTitle:@"OK"
-                          otherButtonTitles:nil];
-        [alert show];
-        [alert release];
-        
-        // Notify parent and close this view
-        [[NSNotificationCenter defaultCenter] 
-         postNotificationName:@"loginViewDidFinish"        
-         object:self];
-        
-        [self dismissModalViewControllerAnimated:YES];
-    }
-
     [self requestTokenFromProvider];
 }
-    
+
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
     if (self) {
-        // Custom initialization
+        
     }
     return self;
 }
 
+- (id)initWithProfile:(Profile *)aProfile
+{
+    self = [super initWithNibName:nil bundle:nil];
+    if (self) {
+        self.title = @"Login to LinkedIn";
+        profile = [aProfile retain];
+    }
+    return self;
+}
+
+- (void)releaseOutlets
+{
+    [webView release];
+    webView = nil;
+    [backButton release];
+    backButton = nil;
+    [activityIndicator release];
+    activityIndicator = nil;
+    [activityOverlayView release];
+    activityOverlayView = nil;
+}
+
 - (void)dealloc
 {
+    [self releaseOutlets];
+    [requestTokenFetcher cancelRequest];
+    [requestTokenFetcher release];
+    [accessTokenFetcher cancelRequest];
+    [accessTokenFetcher release];
+    [linkedInDataFetcher cancelRequest];
+    [linkedInDataFetcher release];
+    [self setProfile:nil];
     [super dealloc];
 }
 
@@ -282,6 +304,7 @@
 
 - (void)viewDidUnload
 {
+    [self releaseOutlets];
     [super viewDidUnload];
     // Release any retained subviews of the main view.
     // e.g. self.myOutlet = nil;
@@ -290,7 +313,39 @@
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
-    return (interfaceOrientation == UIInterfaceOrientationPortrait);
+    return (interfaceOrientation == UIInterfaceOrientationPortrait ||
+            interfaceOrientation == UIInterfaceOrientationPortraitUpsideDown);
+}
+
+- (void)startUpdatingProfile:(Profile *)aProfile
+{
+    [[LinkedInProfileUpdateManager sharedUpdateManager] setProfileDataFetcher:linkedInDataFetcher];
+    [[LinkedInProfileUpdateManager sharedUpdateManager] setProfile:aProfile];
+    [[LinkedInProfileUpdateManager sharedUpdateManager] setUpdateInterval:kLinkedInProfileUpdateInterval];
+    [[LinkedInProfileUpdateManager sharedUpdateManager] startProfileUpdates];
+}
+
+#pragma mark - LinkedInDataFetcherDelegate
+
+- (void)linkedInDataFetcher:(LinkedInDataFetcher *)fetcher didLoadProfile:(NSDictionary *)aProfileDict
+{
+    self.profileDict = aProfileDict;
+    
+    Profile *linkedInProfile = [LinkedInProfileParser updateProfile:self.profile withProfileDict:profileDict];
+    fetcher.delegate = nil;
+    
+    [self startUpdatingProfile:linkedInProfile];
+    
+    [self hideActivityOverlay];
+    [self goToPrivateInfoWithProfile:linkedInProfile];
+}
+
+- (void)linkedInDataFetcher:(LinkedInDataFetcher *)fetcher didFailLoadingProfileWithError:(NSData *)error
+{
+    fetcher.delegate = nil;
+    [self hideActivityOverlay];
+    [self showProfileErrorAlert];
+    NSLog(@"%@",[error description]);
 }
 
 @end

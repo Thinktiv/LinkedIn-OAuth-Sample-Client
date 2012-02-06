@@ -11,20 +11,25 @@
 #import "OAConsumer.h"
 #import "OAMutableURLRequest.h"
 #import "OADataFetcher.h"
-#import "OATokenManager.h"
+#import "Profile.h"
+#import "LinkedInDataFetcher.h"
 
 
-@interface OAuthLoginView : UIViewController <UIWebViewDelegate>
+@interface OAuthLoginView : UIViewController <UIWebViewDelegate, LinkedInDataFetcherDelegate>
 {
     IBOutlet UIWebView *webView;
-    IBOutlet UIActivityIndicatorView *activityIndicator;
-    IBOutlet UITextField *addressBar;
+    UIActivityIndicatorView *activityIndicator;
+    IBOutlet UIButton *backButton;
+    IBOutlet UIView *activityOverlayView;
     
     OAToken *requestToken;
     OAToken *accessToken;
-    OAConsumer *consumer;
     
-    NSDictionary *profile;
+    OADataFetcher *requestTokenFetcher;
+    OADataFetcher *accessTokenFetcher;
+    LinkedInDataFetcher *linkedInDataFetcher;
+    
+    NSDictionary *profileDict;
     
     // Theses ivars could be made into a provider class
     // Then you could pass in different providers for Twitter, LinkedIn, etc
@@ -37,16 +42,21 @@
     NSString *userLoginURLString;
     NSURL *userLoginURL;
     NSString *linkedInCallbackURL;
+    OAConsumer *consumer;
 }
 
 @property(nonatomic, retain) OAToken *requestToken;
 @property(nonatomic, retain) OAToken *accessToken;
-@property(nonatomic, retain) NSDictionary *profile;
+@property(nonatomic, retain) NSDictionary *profileDict;
+@property(nonatomic, retain) Profile *profile;
 @property(nonatomic, retain) OAConsumer *consumer;
 
 - (void)initLinkedInApi;
 - (void)requestTokenFromProvider;
 - (void)allowUserToLogin;
 - (void)accessTokenFromProvider;
+- (void)linkedInProfileCall;
+
+- (id)initWithProfile:(Profile *)aProfile;
 
 @end
