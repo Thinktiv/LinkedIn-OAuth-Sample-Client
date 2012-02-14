@@ -195,6 +195,18 @@
     [pivc release];
 }
 
+- (void)saveProfileAndCloseLoginView
+{
+    [[DataManager sharedDataManager] save];
+    
+    [self.navigationController popToRootViewControllerAnimated:NO];
+    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
+    UIWindow *currentWindow = self.view.window;
+    [UIView transitionWithView:currentWindow duration:0.5 options: UIViewAnimationOptionTransitionFlipFromRight animations:^{
+        currentWindow.rootViewController = appDelegate.tabBarController;
+    } completion:nil];
+}
+
 - (void)backButtonTapped:(id)sender {
     [self.navigationController popToRootViewControllerAnimated:NO];
     
@@ -337,7 +349,13 @@
     [self startUpdatingProfile:linkedInProfile];
     
     [self hideActivityOverlay];
-    [self goToPrivateInfoWithProfile:linkedInProfile];
+    
+    BOOL currentProfileIsSet = [[DataManager sharedDataManager] currentProfileIsSet];
+    if (currentProfileIsSet) {
+        [self saveProfileAndCloseLoginView];
+    } else  {
+        [self goToPrivateInfoWithProfile:linkedInProfile];
+    }
 }
 
 - (void)linkedInDataFetcher:(LinkedInDataFetcher *)fetcher didFailLoadingProfileWithError:(NSData *)error
