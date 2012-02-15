@@ -111,7 +111,14 @@
         }
         else
         {
-            [self.navigationController popViewControllerAnimated:YES];
+            [self.navigationController popToRootViewControllerAnimated:NO];
+            AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
+            UIWindow *currentWindow = self.view.window;
+            [UIView transitionWithView:currentWindow duration:0.5 options: UIViewAnimationOptionTransitionFlipFromRight animations:^{
+                currentWindow.rootViewController = appDelegate.tabBarController;
+            } completion:nil];
+            
+            [appDelegate.tabBarController setSelectedIndex:0];
         }
     }
     
