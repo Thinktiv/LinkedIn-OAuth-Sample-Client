@@ -13,6 +13,8 @@
 #import "OADataFetcher.h"
 #import "Profile.h"
 #import "LinkedInDataFetcher.h"
+#import "CanWeNetworkAPIClient.h"
+#import "Utilities.h"
 
 
 @interface OAuthLoginView : UIViewController <UIWebViewDelegate, LinkedInDataFetcherDelegate>

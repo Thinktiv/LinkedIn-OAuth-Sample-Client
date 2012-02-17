@@ -197,9 +197,24 @@
 
 - (void)goToPrivateInfoWithProfile:(Profile *)aProfile
 {
-    PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
-    [self.navigationController pushViewController:pivc animated:YES];
-    [pivc release];
+    NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:aProfile.linkedInId, @"linkedin_id",
+                          [Utilities stringWithUUID], @"device_id",
+                          [Utilities stringWithUUID], @"udid", 
+                          nil];
+    
+    [[CanWeNetworkAPIClient sharedClient] postMethod:@"profile/" parameters:dict block:^(NSDictionary *records) {
+        if([records objectForKey:@"id"]){
+            aProfile.id = [records objectForKey:@"id"];
+            PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
+            [self.navigationController pushViewController:pivc animated:YES];
+            [pivc release];
+        }else{
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
+            [alert show];
+            [alert release];
+            [self.navigationController popViewControllerAnimated:YES];
+        }
+    }];
 }
 
 - (void)saveProfileAndCloseLoginView
