@@ -241,8 +241,8 @@
 
 - (void)initLinkedInApi
 {
-    apikey = @"pr8muxsq7t0z";
-    secretkey = @"NljvX8ge1CFsBSJY";   
+    apikey = linkedInAPIkey;
+    secretkey = linkedInSecretKey;
     
     consumer = [[OAConsumer alloc] initWithKey:apikey
                                         secret:secretkey
