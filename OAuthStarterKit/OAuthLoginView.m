@@ -11,7 +11,6 @@
 #import "Defines.h"
 #import "AppDelegate.h"
 #import "Profile.h"
-#import "PublicInfo.h"
 #import "Skill.h"
 #import "Industry.h"
 #import "Experience.h"
