@@ -161,6 +161,7 @@
     else
     {
         self.accessToken = [[[OAToken alloc] initWithHTTPResponseBody:responseBody] autorelease];
+        [self.accessToken storeInUserDefaultsWithServiceProviderName:@"LinkedIn" prefix:nil];
         [self linkedInProfileCall];
     }
     [responseBody release];
@@ -197,13 +198,15 @@
 - (void)goToPrivateInfoWithProfile:(Profile *)aProfile
 {
     NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:aProfile.linkedInId, @"linkedin_id",
-                          [Utilities stringWithUUID], @"device_id",
+                          aProfile.deviceId, @"device_id",
                           [Utilities stringWithUUID], @"udid", 
                           nil];
     
     [[CanWeNetworkAPIClient sharedClient] postMethod:@"profile/" parameters:dict block:^(NSDictionary *records) {
         if([records objectForKey:@"id"]){
             aProfile.id = [records objectForKey:@"id"];
+            [[NSUserDefaults standardUserDefaults] setValue:aProfile.id forKey:kLastProfileId];
+            [[NSUserDefaults standardUserDefaults] synchronize];
             PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
             [self.navigationController pushViewController:pivc animated:YES];
             [pivc release];
