@@ -205,7 +205,10 @@
     [[CanWeNetworkAPIClient sharedClient] postMethod:@"profile/" parameters:dict block:^(NSDictionary *records) {
         if([records objectForKey:@"id"]){
             aProfile.id = [records objectForKey:@"id"];
-            [[NSUserDefaults standardUserDefaults] setValue:aProfile.id forKey:kLastProfileId];
+            
+            [[DataManager sharedDataManager] deleteDuplicatesOfProfile:aProfile];
+            
+            //[[NSUserDefaults standardUserDefaults] setValue:aProfile.id forKey:kLastProfileId];
             [[NSUserDefaults standardUserDefaults] synchronize];
             PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
             [self.navigationController pushViewController:pivc animated:YES];
