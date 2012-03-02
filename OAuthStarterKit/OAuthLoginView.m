@@ -18,6 +18,7 @@
 #import "PrivateInfoViewController.h"
 #import "LinkedInProfileParser.h"
 #import "LinkedInProfileUpdateManager.h"
+#import "Utilities.h"
 
 @implementation OAuthLoginView
 
@@ -224,14 +225,30 @@
 
 - (void)saveProfileAndCloseLoginView
 {
-    [[DataManager sharedDataManager] save];
+    NSString *pictureUrl = self.profile.pictureUrl;
+    if (pictureUrl.length > 0) {
+        UIImage *image = [[CacheMan sharedCacheMan] cachedImageForURL:pictureUrl cacheName:nil placeholderImage:nil];
+        NSData* imageData = UIImageJPEGRepresentation(image, 1.0);
+        NSString *uniqueString = [NSString stringWithFormat:@"%@.jpg", [Utilities stringWithUUID]];
+        self.profile.pictureUrl = uniqueString;
+        NSURL *pictureUrl = [NSURL URLWithString:uniqueString];
+        [[CacheMan sharedCacheMan] cacheImageData:imageData forURL:pictureUrl cacheName:nil];
+    }
     
-    [self.navigationController popToRootViewControllerAnimated:NO];
-    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
-    UIWindow *currentWindow = self.view.window;
-    [UIView transitionWithView:currentWindow duration:0.5 options: UIViewAnimationOptionTransitionFlipFromRight animations:^{
-        currentWindow.rootViewController = appDelegate.tabBarController;
-    } completion:nil];
+    [[DataManager sharedDataManager] save];
+    [[DataManager sharedDataManager] postProfileTheServer:self.profile block: ^(NSDictionary *records){
+        [self hideActivityOverlay];
+        if(records && [records objectForKey:@"status"]){
+            [self.navigationController popToRootViewControllerAnimated:NO];
+            AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
+            UIWindow *currentWindow = self.view.window;
+            [UIView transitionWithView:currentWindow duration:0.5 options: UIViewAnimationOptionTransitionFlipFromRight animations:^{
+                currentWindow.rootViewController = appDelegate.tabBarController;
+            } completion:nil];
+        } else {
+            // handle error
+        }
+    }];
 }
 
 - (void)backButtonTapped:(id)sender {
