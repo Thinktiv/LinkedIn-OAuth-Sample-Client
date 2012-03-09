@@ -18,6 +18,7 @@
 #import "PrivateInfoViewController.h"
 #import "LinkedInProfileParser.h"
 #import "LinkedInProfileUpdateManager.h"
+#import "Utilities.h"
 
 @implementation OAuthLoginView
 
@@ -223,8 +224,18 @@
     }];
 }
 
+
 - (void)saveProfileAndCloseLoginView:(Profile *)aProfile
 {
+    NSString *pictureUrl = self.profile.pictureUrl;
+    if (pictureUrl.length > 0) {
+            UIImage *image = [[CacheMan sharedCacheMan] cachedImageForURL:[NSURL URLWithString:pictureUrl] cacheName:nil placeholderImage:nil];
+            NSData* imageData = UIImageJPEGRepresentation(image, 1.0);
+            NSString *uniqueString = [NSString stringWithFormat:@"%@.jpg", [Utilities stringWithUUID]];
+            self.profile.pictureUrl = uniqueString;
+            NSURL *pictureUrl = [NSURL URLWithString:uniqueString];
+            [[CacheMan sharedCacheMan] cacheImageData:imageData forURL:pictureUrl cacheName:nil];
+    }
     
     [[DataManager sharedDataManager] postProfileToTheServer:aProfile block: ^(NSDictionary *records){
         if(records && [records objectForKey:@"status"]){
@@ -382,6 +393,7 @@
     
     Profile *linkedInProfile = [LinkedInProfileParser updateProfile:self.profile withProfileDict:profileDict];
     fetcher.delegate = nil;
+    
     [self startUpdatingProfile:linkedInProfile];
     
     [self hideActivityOverlay];
