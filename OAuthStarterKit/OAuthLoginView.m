@@ -223,16 +223,25 @@
     }];
 }
 
-- (void)saveProfileAndCloseLoginView
+- (void)saveProfileAndCloseLoginView:(Profile *)aProfile
 {
-    [[DataManager sharedDataManager] save];
     
-    [self.navigationController popToRootViewControllerAnimated:NO];
-    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
-    UIWindow *currentWindow = self.view.window;
-    [UIView transitionWithView:currentWindow duration:0.5 options: UIViewAnimationOptionTransitionFlipFromRight animations:^{
-        currentWindow.rootViewController = appDelegate.tabBarController;
-    } completion:nil];
+    [[DataManager sharedDataManager] postProfileToTheServer:aProfile block: ^(NSDictionary *records){
+        if(records && [records objectForKey:@"status"]){
+            [self.navigationController popToRootViewControllerAnimated:NO];
+            AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
+            UIWindow *currentWindow = self.view.window;
+            [UIView transitionWithView:currentWindow duration:0.5 options: UIViewAnimationOptionTransitionFlipFromRight animations:^{
+                currentWindow.rootViewController = appDelegate.tabBarController;
+            } completion:nil];
+            
+        }else{
+            aProfile.linkedInId = @"";
+        }
+    }];
+    
+    [self hideActivityOverlay]; 
+    [[DataManager sharedDataManager] save];
 }
 
 - (void)backButtonTapped:(id)sender {
@@ -373,14 +382,13 @@
     
     Profile *linkedInProfile = [LinkedInProfileParser updateProfile:self.profile withProfileDict:profileDict];
     fetcher.delegate = nil;
-    
     [self startUpdatingProfile:linkedInProfile];
     
     [self hideActivityOverlay];
     
     BOOL currentProfileIsSet = [[DataManager sharedDataManager] currentProfileIsSet];
     if (currentProfileIsSet) {
-        [self saveProfileAndCloseLoginView];
+        [self saveProfileAndCloseLoginView:linkedInProfile];
     } else  {
         [self goToPrivateInfoWithProfile:linkedInProfile];
     }
