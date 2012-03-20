@@ -20,6 +20,9 @@
 #import "LinkedInProfileUpdateManager.h"
 #import "Utilities.h"
 
+#define kOAuthTokenKey @"oauth_token"
+#define kOAuthTokenSecretKey @"oauth_token_secret"
+
 @implementation OAuthLoginView
 
 @synthesize requestToken, accessToken, profileDict, profile, consumer;
@@ -153,15 +156,16 @@
                                                    encoding:NSUTF8StringEncoding];
     
     BOOL problem = ([responseBody rangeOfString:@"oauth_problem"].location != NSNotFound);
-    if ( problem )
-    {
+    if (problem) {
         NSLog(@"Request access token failed.");
         NSLog(@"%@",responseBody);
         [self showConnectionErrorAlert];
-    }
-    else
-    {
-        [self.profile setLinkedInOAuthToken:responseBody];
+    } else {
+        //Getting linkedIn oauth token and oauth token secret
+        NSDictionary *accessTokenDict = [Utilities parseQueryString:responseBody];
+        [self.profile setLinkedInOAuthToken:[accessTokenDict objectForKey:kOAuthTokenKey]];
+        [self.profile setLinkedInOAuthTokenSecret:[accessTokenDict objectForKey:kOAuthTokenSecretKey]];
+        
         self.accessToken = [[[OAToken alloc] initWithHTTPResponseBody:responseBody] autorelease];
         [self.accessToken storeInUserDefaultsWithServiceProviderName:@"LinkedIn" prefix:nil];
         [self linkedInProfileCall];
@@ -229,12 +233,12 @@
 {
     NSString *pictureUrl = self.profile.pictureUrl;
     if (pictureUrl.length > 0) {
-            UIImage *image = [[CacheMan sharedCacheMan] cachedImageForURL:[NSURL URLWithString:pictureUrl] cacheName:nil placeholderImage:nil];
-            NSData* imageData = UIImageJPEGRepresentation(image, 1.0);
-            NSString *uniqueString = [NSString stringWithFormat:@"%@.jpg", [Utilities stringWithUUID]];
-            self.profile.pictureUrl = uniqueString;
-            NSURL *pictureUrl = [NSURL URLWithString:uniqueString];
-            [[CacheMan sharedCacheMan] cacheImageData:imageData forURL:pictureUrl cacheName:nil];
+        UIImage *image = [[CacheMan sharedCacheMan] cachedImageForURL:[NSURL URLWithString:pictureUrl] cacheName:nil placeholderImage:nil];
+        NSData* imageData = UIImageJPEGRepresentation(image, 1.0);
+        NSString *uniqueString = [NSString stringWithFormat:@"%@.jpg", [Utilities stringWithUUID]];
+        self.profile.pictureUrl = uniqueString;
+        NSURL *pictureUrl = [NSURL URLWithString:uniqueString];
+        [[CacheMan sharedCacheMan] cacheImageData:imageData forURL:pictureUrl cacheName:nil];
     }
     
     [[DataManager sharedDataManager] postProfileToTheServer:aProfile block: ^(NSDictionary *records){
