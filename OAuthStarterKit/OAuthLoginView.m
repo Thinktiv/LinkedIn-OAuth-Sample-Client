@@ -29,8 +29,8 @@
 
 - (void)showConnectionErrorAlert
 {
-    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
-                                                        message:@"Please check your internet connection and try again" delegate:self 
+    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:nil
+                                                        message:kLinkedInConnectionError delegate:self 
                                               cancelButtonTitle:@"OK" otherButtonTitles:nil];
     [alertView show];
     [alertView release];
@@ -38,8 +38,8 @@
 
 - (void)showProfileErrorAlert
 {
-    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
-                                                        message:@"We were unable to import your LinkedIn profile. Please check your internet connection and try again." delegate:self 
+    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:nil
+                                                        message:kLinkedInConnectionError delegate:self 
                                               cancelButtonTitle:@"OK" otherButtonTitles:nil];
     [alertView show];
     [alertView release];
@@ -162,9 +162,9 @@
         [self showConnectionErrorAlert];
     } else {
         //Getting linkedIn oauth token and oauth token secret
-        NSDictionary *accessTokenDict = [Utilities parseQueryString:responseBody];
-        [self.profile setLinkedInOAuthToken:[accessTokenDict objectForKey:kOAuthTokenKey]];
-        [self.profile setLinkedInOAuthTokenSecret:[accessTokenDict objectForKey:kOAuthTokenSecretKey]];
+        //NSDictionary *accessTokenDict = [Utilities parseQueryString:responseBody];
+        //[self.profile setLinkedInOAuthToken:[accessTokenDict objectForKey:kOAuthTokenKey]];
+        //[self.profile setLinkedInOAuthTokenSecret:[accessTokenDict objectForKey:kOAuthTokenSecretKey]];
         
         self.accessToken = [[[OAToken alloc] initWithHTTPResponseBody:responseBody] autorelease];
         [self.accessToken storeInUserDefaultsWithServiceProviderName:@"LinkedIn" prefix:nil];
@@ -213,14 +213,13 @@
             aProfile.id = [records objectForKey:@"id"];
             
             [[DataManager sharedDataManager] deleteDuplicatesOfProfile:aProfile];
-            
-            //[[NSUserDefaults standardUserDefaults] setValue:aProfile.id forKey:kLastProfileId];
+            [[CanWeNetworkAPIClient sharedClient] setAuthenticationChallenge:aProfile.linkedInId password:aProfile.linkedInOAuthToken linkedIn:YES];
             [[NSUserDefaults standardUserDefaults] synchronize];
             PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
             [self.navigationController pushViewController:pivc animated:YES];
             [pivc release];
         }else{
-            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:kLoginErrorMsg delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
             [alert show];
             [alert release];
             [self.navigationController popViewControllerAnimated:YES];
