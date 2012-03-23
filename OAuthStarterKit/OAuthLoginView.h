@@ -15,6 +15,7 @@
 #import "LinkedInDataFetcher.h"
 #import "CanWeNetworkAPIClient.h"
 #import "Utilities.h"
+#import "LoginDelegate.h"
 
 
 @interface OAuthLoginView : UIViewController <UIWebViewDelegate, LinkedInDataFetcherDelegate>
@@ -52,6 +53,7 @@
 @property(nonatomic, retain) NSDictionary *profileDict;
 @property(nonatomic, retain) Profile *profile;
 @property(nonatomic, retain) OAConsumer *consumer;
+@property (assign, nonatomic) id<LoginDelegate> delegate;
 
 - (void)initLinkedInApi;
 - (void)requestTokenFromProvider;

@@ -20,17 +20,19 @@
 #import "LinkedInProfileUpdateManager.h"
 #import "Utilities.h"
 
+#define kDuplicateProfileStatus 1
 #define kOAuthTokenKey @"oauth_token"
 #define kOAuthTokenSecretKey @"oauth_token_secret"
 
 @implementation OAuthLoginView
 
 @synthesize requestToken, accessToken, profileDict, profile, consumer;
+@synthesize delegate;
 
 - (void)showConnectionErrorAlert
 {
-    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                        message:kLinkedInConnectionError delegate:self 
+    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
+                                                        message:@"Please check your internet connection and try again" delegate:self 
                                               cancelButtonTitle:@"OK" otherButtonTitles:nil];
     [alertView show];
     [alertView release];
@@ -38,8 +40,8 @@
 
 - (void)showProfileErrorAlert
 {
-    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                        message:kLinkedInConnectionError delegate:self 
+    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
+                                                        message:@"We were unable to import your LinkedIn profile. Please check your internet connection and try again." delegate:self 
                                               cancelButtonTitle:@"OK" otherButtonTitles:nil];
     [alertView show];
     [alertView release];
@@ -126,7 +128,7 @@
     }
     
 	return YES;
-}
+    ;}
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView
 {
@@ -156,17 +158,19 @@
                                                    encoding:NSUTF8StringEncoding];
     
     BOOL problem = ([responseBody rangeOfString:@"oauth_problem"].location != NSNotFound);
-    if (problem) {
+    if ( problem )
+    {
         NSLog(@"Request access token failed.");
         NSLog(@"%@",responseBody);
         [self showConnectionErrorAlert];
-    } else {
+    }
+    else
+    {
         //Getting linkedIn oauth token and oauth token secret
-        //NSDictionary *accessTokenDict = [Utilities parseQueryString:responseBody];
-        //[self.profile setLinkedInOAuthToken:[accessTokenDict objectForKey:kOAuthTokenKey]];
-        //[self.profile setLinkedInOAuthTokenSecret:[accessTokenDict objectForKey:kOAuthTokenSecretKey]];
-        
-        self.accessToken = [[[OAToken alloc] initWithHTTPResponseBody:responseBody] autorelease];
+        NSDictionary *accessTokenDict = [Utilities parseQueryString:responseBody];
+        [self.profile setLinkedInOAuthToken:[accessTokenDict objectForKey:kOAuthTokenKey]];	
+        [self.profile setLinkedInOAuthTokenSecret:[accessTokenDict objectForKey:kOAuthTokenSecretKey]];	
+        self.accessToken = [[[OAToken alloc] initWithHTTPResponseBody:responseBody] autorelease];	
         [self.accessToken storeInUserDefaultsWithServiceProviderName:@"LinkedIn" prefix:nil];
         [self linkedInProfileCall];
     }
@@ -201,32 +205,86 @@
     [linkedInDataFetcher requestProfile];
 }
 
+- (BOOL)profileIsValid:(NSDictionary *)aProfileDict
+{
+    BOOL profileIsValid = NO;
+    
+    // Let's assume that profile if valid if it has a title
+    id title = [aProfileDict objectForKey:@"title"];
+    if ([title isKindOfClass:[NSString class]] && ![Utilities stringIsEmpty:title]) {
+        profileIsValid = YES;
+    }
+    
+    return profileIsValid;
+}
+
+- (void)goToInApp
+{
+    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
+    [appDelegate switchToTabBarController];
+	[appDelegate.tabBarController setSelectedIndex:0];
+}
+
 - (void)goToPrivateInfoWithProfile:(Profile *)aProfile
 {
-    NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:aProfile.linkedInId, @"linkedin_id",
-                          aProfile.deviceId, @"device_id",
-                          [Utilities stringWithUUID], @"udid", 
-                          nil];
+    NSDictionary *profileFields = [NSDictionary dictionaryWithObjectsAndKeys:
+                                   aProfile.linkedInId, @"linkedin_id",
+                                   aProfile.deviceId, @"device_id",
+                                   aProfile.linkedInOAuthToken, @"linkedin_auth_token",
+                                   aProfile.linkedInOAuthTokenSecret, @"linkedin_oauth_token_secret",
+                                   [Utilities UDID], @"udid", 
+                                   nil];
     
-    [[CanWeNetworkAPIClient sharedClient] postMethod:@"profile/" parameters:dict block:^(NSDictionary *records) {
-        if([records objectForKey:@"id"]){
-            aProfile.id = [records objectForKey:@"id"];
+    [[CanWeNetworkAPIClient sharedClient] postMethod:kProfileAPI parameters:profileFields xtimes:[NSNumber numberWithInt:0] block:^(NSDictionary *records) {
+        if ([records objectForKey:@"id"] || [[records objectForKey:@"status"] isEqualToNumber:[NSNumber numberWithInt:kDuplicateProfileStatus]]) {
+            NSDictionary *loginCredentials = [NSDictionary dictionaryWithObjectsAndKeys:
+                                              [Utilities UDID], @"udid",
+                                              aProfile.linkedInId, @"linkedin_id",
+                                              aProfile.linkedInOAuthToken, @"linkedin_oauth_token",
+                                              aProfile.linkedInOAuthTokenSecret, @"linkedin_oauth_token_secret",
+                                              nil];
             
-            [[DataManager sharedDataManager] deleteDuplicatesOfProfile:aProfile];
-            [[CanWeNetworkAPIClient sharedClient] setAuthenticationChallenge:aProfile.linkedInId password:aProfile.linkedInOAuthToken linkedIn:YES];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
-            [self.navigationController pushViewController:pivc animated:YES];
-            [pivc release];
-        }else{
-            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:kLoginErrorMsg delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
+            aProfile.id = [records objectForKey:@"id"];
+            [[CanWeNetworkAPIClient sharedClient] postMethod:kLoginAPI parameters:loginCredentials xtimes:[NSNumber numberWithInt:0] block:^(NSDictionary *response) {    
+                if ([response objectForKey:@"profile_info"] && [response objectForKey:@"udid_info"]) {
+                    NSDictionary *aProfileDict = [response objectForKey:@"profile_info"];
+                    NSDictionary *anUdidInfoDict = [response objectForKey:@"udid_info"];
+                    if ([self profileIsValid:aProfileDict] ) {
+                        // Profile is valid, so we can map it into managed object
+                        NSArray *profileArray = [NSArray arrayWithObject:aProfileDict];
+                        NSArray *mappedObjects = [[DataManager sharedDataManager] mapObjectsFromArray:profileArray toClass:[Profile class]];
+                        Profile *mappedProfile = [mappedObjects lastObject];
+                        
+                        // And set it as current profile and switch to inApp
+                        if (mappedProfile != nil) {
+                            [Utilities tryToPerformSelector:@selector(loginViewController:didLoginWithProfile:) withObject:self withObject:mappedProfile onTarget:self.delegate];
+                            [self goToInApp];
+                        }
+                    } else {
+                        // Profile is invalid, so we have to go to onboarding process
+                        [[DataManager sharedDataManager] deleteDuplicatesOfProfile:aProfile];
+                        NSNumber *udidObjectId = [anUdidInfoDict objectForKey:@"id"];
+                        NSString *udidObjectIdString = [udidObjectId stringValue];
+                        NSString *login = [NSString stringWithFormat:@"%@:%@", aProfile.linkedInId, udidObjectIdString];
+                        
+                        [[CanWeNetworkAPIClient sharedClient] setAuthenticationChallenge:login password:aProfile.linkedInOAuthToken linkedIn:YES];
+                        PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
+                        [self.navigationController pushViewController:pivc animated:YES];
+                        [pivc release];
+                    }
+                } else {
+                    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
+                    [alert show];
+                    [alert release];
+                }
+            }];
+        } else {
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
             [alert show];
             [alert release];
-            [self.navigationController popViewControllerAnimated:YES];
         }
     }];
 }
-
 
 - (void)saveProfileAndCloseLoginView:(Profile *)aProfile
 {
@@ -240,7 +298,7 @@
         [[CacheMan sharedCacheMan] cacheImageData:imageData forURL:pictureUrl cacheName:nil];
     }
     
-    [[DataManager sharedDataManager] postProfileToTheServer:aProfile block: ^(NSDictionary *records){
+    [[DataManager sharedDataManager] postProfileToTheServer:aProfile block: ^(NSDictionary *records) {
         if(records && [records objectForKey:@"status"]){
             [self.navigationController popToRootViewControllerAnimated:NO];
             AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
@@ -258,7 +316,8 @@
     [[DataManager sharedDataManager] save];
 }
 
-- (void)backButtonTapped:(id)sender {
+- (void)backButtonTapped:(id)sender 
+{
     [self.navigationController popToRootViewControllerAnimated:NO];
     
     AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
@@ -345,6 +404,7 @@
 - (void)dealloc
 {
     [self releaseOutlets];
+    self.delegate = nil;
     [requestTokenFetcher cancelRequest];
     [requestTokenFetcher release];
     [accessTokenFetcher cancelRequest];
