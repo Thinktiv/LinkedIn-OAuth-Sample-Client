@@ -257,6 +257,11 @@
                         
                         // And set it as current profile and switch to inApp
                         if (mappedProfile != nil) {
+                            NSNumber *udidObjectId = [anUdidInfoDict objectForKey:@"id"];
+                            NSString *udidObjectIdString = [udidObjectId stringValue];
+                            NSString *login = [NSString stringWithFormat:@"%@:%@", aProfile.linkedInId, udidObjectIdString];
+                            
+                            [[CanWeNetworkAPIClient sharedClient] setAuthenticationChallenge:login password:aProfile.linkedInOAuthToken linkedIn:YES];
                             [Utilities tryToPerformSelector:@selector(loginViewController:didLoginWithProfile:) withObject:self withObject:mappedProfile onTarget:self.delegate];
                             [self goToInApp];
                         }
