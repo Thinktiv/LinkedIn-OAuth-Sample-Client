@@ -227,12 +227,14 @@
 
 - (void)goToPrivateInfoWithProfile:(Profile *)aProfile
 {
+    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
     NSDictionary *profileFields = [NSDictionary dictionaryWithObjectsAndKeys:
                                    aProfile.linkedInId, @"linkedin_id",
                                    aProfile.deviceId, @"device_id",
                                    aProfile.linkedInOAuthToken, @"linkedin_auth_token",
                                    aProfile.linkedInOAuthTokenSecret, @"linkedin_oauth_token_secret",
                                    [Utilities UDID], @"udid", 
+                                   appDelegate.apnTokeString, @"apn_token",
                                    nil];
     
     [[CanWeNetworkAPIClient sharedClient] postMethod:kProfileAPI parameters:profileFields xtimes:[NSNumber numberWithInt:0] block:^(NSDictionary *records) {
