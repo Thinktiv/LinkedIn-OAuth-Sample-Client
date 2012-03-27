@@ -21,6 +21,7 @@
 #import "Utilities.h"
 
 #define kDuplicateProfileStatus 1
+#define kLinkedInRevokeUrlString @"https://www.linkedin.com/secure/settings?userAgree="
 #define kOAuthTokenKey @"oauth_token"
 #define kOAuthTokenSecretKey @"oauth_token_secret"
 
@@ -28,6 +29,21 @@
 
 @synthesize requestToken, accessToken, profileDict, profile, consumer;
 @synthesize delegate;
+
+- (void)deleteCookies
+{
+    NSHTTPCookie *cookie;
+    NSHTTPCookieStorage *storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+    for (cookie in [storage cookies]) {
+        [storage deleteCookie:cookie];
+    }
+}
+
+- (void)goToInApp
+{
+    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
+    [appDelegate switchToTabBarController];
+}
 
 - (void)showConnectionErrorAlert
 {
@@ -93,14 +109,52 @@
     [webView loadRequest:request];     
 }
 
+- (void)revokePermissionTapped
+{    
+    Profile *currentProfile = [[DataManager sharedDataManager] currentProfile];
+    if ([currentProfile isCreatedWithLinkedIn]) {
+        [[DataManager sharedDataManager] logout];
+        [self goToInApp];
+        AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
+        [appDelegate.tabBarController setSelectedIndex:0];
+    } else {
+        [currentProfile deleteLinkedInInfo];
+        [[DataManager sharedDataManager] postProfileToTheServer:currentProfile block:^(NSDictionary *records) {
+            if(records && [records objectForKey:@"status"]) {
+                [self goToInApp];
+            } else {
+                
+            }
+        }];
+        
+    }
+    // Delete linkedin cookies to make user enter login and password next time
+    [self deleteCookies];
+}
+
 - (BOOL)webView:(UIWebView*)webView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType 
 {
 	NSURL *url = request.URL;
+    NSData *data = request.HTTPBody;
+    
+    NSString* aStr;
+	aStr = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
+    
 	NSString *urlString = url.absoluteString;
     
     if ([urlString isEqualToString:kLinkedInJoinUrlString]) {
         [[UIApplication sharedApplication] openURL:[NSURL URLWithString:kLinkedInJoinUrlString]];
         return NO;
+    }
+    
+    // Check if user tapped revoke permission button
+    if ([urlString isEqualToString:kLinkedInRevokeUrlString]) {
+        if ([[DataManager sharedDataManager] currentProfileIsSet]) {
+            [self revokePermissionTapped];
+            return NO;
+        } else {
+            return YES;
+        }
     }
     
     [activityIndicator startAnimating];
@@ -216,13 +270,6 @@
     }
     
     return profileIsValid;
-}
-
-- (void)goToInApp
-{
-    AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
-    [appDelegate switchToTabBarController];
-	[appDelegate.tabBarController setSelectedIndex:0];
 }
 
 - (void)goToPrivateInfoWithProfile:(Profile *)aProfile
