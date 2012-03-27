@@ -22,6 +22,7 @@
 
 #define kDuplicateProfileStatus 1
 #define kLinkedInRevokeUrlString @"https://www.linkedin.com/secure/settings?userAgree="
+#define kLinkedInContinueUrlString @"https://www.linkedin.com/uas/oauth/authenticate?oauth_token="
 #define kOAuthTokenKey @"oauth_token"
 #define kOAuthTokenSecretKey @"oauth_token_secret"
 
@@ -144,6 +145,12 @@
     
     if ([urlString isEqualToString:kLinkedInJoinUrlString]) {
         [[UIApplication sharedApplication] openURL:[NSURL URLWithString:kLinkedInJoinUrlString]];
+        return NO;
+    }
+    
+    NSRange range = [urlString rangeOfString:kLinkedInContinueUrlString];
+    if ([[[DataManager sharedDataManager] currentProfile] isConnectedToLInkedIn] && range.location != NSNotFound) {
+        [self goToInApp];
         return NO;
     }
     
@@ -283,6 +290,7 @@
                                    [Utilities UDID], @"udid", 
                                    appDelegate.apnTokeString, @"apn_token",
                                    nil];
+    
     [[CanWeNetworkAPIClient sharedClient] addBaseCredentials];
     [[CanWeNetworkAPIClient sharedClient] postMethod:kProfileAPI parameters:profileFields xtimes:[NSNumber numberWithInt:0] block:^(NSDictionary *records) {
         if ([records objectForKey:@"id"] || [[records objectForKey:@"status"] isEqualToNumber:[NSNumber numberWithInt:kDuplicateProfileStatus]]) {
@@ -310,6 +318,7 @@
                             NSString *udidObjectIdString = [udidObjectId stringValue];
                             NSString *login = [NSString stringWithFormat:@"%@:%@", aProfile.linkedInId, udidObjectIdString];
                             
+                            NSLog(@"Login: %@, Password: %@", login, aProfile.linkedInOAuthToken);
                             [[CanWeNetworkAPIClient sharedClient] setAuthenticationChallenge:login password:aProfile.linkedInOAuthToken linkedIn:YES];
                             [Utilities tryToPerformSelector:@selector(loginViewController:didLoginWithProfile:) withObject:self withObject:mappedProfile onTarget:self.delegate];
                             [self goToInApp];
@@ -321,6 +330,7 @@
                         NSString *udidObjectIdString = [udidObjectId stringValue];
                         NSString *login = [NSString stringWithFormat:@"%@:%@", aProfile.linkedInId, udidObjectIdString];
                         
+                        NSLog(@"Login: %@, Password: %@", login, aProfile.linkedInOAuthToken);
                         [[CanWeNetworkAPIClient sharedClient] setAuthenticationChallenge:login password:aProfile.linkedInOAuthToken linkedIn:YES];
                         PrivateInfoViewController *pivc = [[PrivateInfoViewController alloc] initWithProfile:aProfile];
                         [self.navigationController pushViewController:pivc animated:YES];
