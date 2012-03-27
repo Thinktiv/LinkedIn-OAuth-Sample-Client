@@ -283,7 +283,7 @@
                                    [Utilities UDID], @"udid", 
                                    appDelegate.apnTokeString, @"apn_token",
                                    nil];
-    
+    [[CanWeNetworkAPIClient sharedClient] addBaseCredentials];
     [[CanWeNetworkAPIClient sharedClient] postMethod:kProfileAPI parameters:profileFields xtimes:[NSNumber numberWithInt:0] block:^(NSDictionary *records) {
         if ([records objectForKey:@"id"] || [[records objectForKey:@"status"] isEqualToNumber:[NSNumber numberWithInt:kDuplicateProfileStatus]]) {
             NSDictionary *loginCredentials = [NSDictionary dictionaryWithObjectsAndKeys:
