@@ -136,11 +136,6 @@
 - (BOOL)webView:(UIWebView*)webView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType 
 {
 	NSURL *url = request.URL;
-    NSData *data = request.HTTPBody;
-    
-    NSString* aStr;
-	aStr = [[NSString alloc] initWithData:data encoding:NSASCIIStringEncoding];
-    
 	NSString *urlString = url.absoluteString;
     
     if ([urlString isEqualToString:kLinkedInJoinUrlString]) {
