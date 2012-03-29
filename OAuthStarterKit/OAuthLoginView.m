@@ -277,7 +277,7 @@
 - (void)goToPrivateInfoWithProfile:(Profile *)aProfile
 {
     AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
-    aProfile.apn_token = appDelegate.apnTokeString;
+    appDelegate.shouldUpdateApn = YES;
     NSDictionary *profileFields = [NSDictionary dictionaryWithObjectsAndKeys:
                                    aProfile.linkedInId, @"linkedin_id",
                                    aProfile.deviceId, @"device_id",
@@ -318,15 +318,6 @@
                             [[CanWeNetworkAPIClient sharedClient] setAuthenticationChallenge:login password:aProfile.linkedInOAuthToken linkedIn:YES];
                             [Utilities tryToPerformSelector:@selector(loginViewController:didLoginWithProfile:) withObject:self withObject:mappedProfile onTarget:self.delegate];
                             [self goToInApp];
-                            //get udid_info
-                            AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
-                            if([[anUdidInfoDict objectForKey:@"apn_token"] isKindOfClass:[NSString class]]){
-                                if(![[anUdidInfoDict objectForKey:@"apn_token"] isEqualToString:appDelegate.apnTokeString]){
-                                    appDelegate.shouldUpdateApn = YES;
-                                }else{
-                                    appDelegate.shouldUpdateApn = NO;
-                                }
-                            }
                         }
                     } else {
                         // Profile is invalid, so we have to go to onboarding process
