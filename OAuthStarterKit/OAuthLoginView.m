@@ -31,15 +31,6 @@
 @synthesize requestToken, accessToken, profileDict, profile, consumer;
 @synthesize delegate;
 
-- (void)deleteCookies
-{
-    NSHTTPCookie *cookie;
-    NSHTTPCookieStorage *storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
-    for (cookie in [storage cookies]) {
-        [storage deleteCookie:cookie];
-    }
-}
-
 - (void)goToInApp
 {
     AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
@@ -130,7 +121,7 @@
         
     }
     // Delete linkedin cookies to make user enter login and password next time
-    [self deleteCookies];
+    [[DataManager sharedDataManager] deleteLinkedInCookies];
 }
 
 - (BOOL)webView:(UIWebView*)webView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType 
