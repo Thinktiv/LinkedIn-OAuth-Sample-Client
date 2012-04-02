@@ -19,6 +19,7 @@
 #import "LinkedInProfileParser.h"
 #import "LinkedInProfileUpdateManager.h"
 #import "Utilities.h"
+#import "AlertManager.h"
 
 #define kDuplicateProfileStatus 1
 #define kLinkedInRevokeUrlString @"https://www.linkedin.com/secure/settings?userAgree="
@@ -39,20 +40,32 @@
 
 - (void)showConnectionErrorAlert
 {
-    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
-                                                        message:@"Please check your internet connection and try again" delegate:self 
-                                              cancelButtonTitle:@"OK" otherButtonTitles:nil];
-    [alertView show];
-    [alertView release];
+    //    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
+    //                                                        message:@"Please check your internet connection and try again" delegate:self 
+    //                                              cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    //    [alertView show];
+    //    [alertView release];
+    
+    [[AlertManager sharedManager] showAlertWithTitle:@"Connection error" 
+                                             message:@"Please check your internet connection and try again" 
+                                            delegate:nil 
+                                   cancelButtonTitle:@"OK" 
+                                   secondButtonTitle:nil];
 }
 
 - (void)showProfileErrorAlert
 {
-    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
-                                                        message:@"We were unable to import your LinkedIn profile. Please check your internet connection and try again." delegate:self 
-                                              cancelButtonTitle:@"OK" otherButtonTitles:nil];
-    [alertView show];
-    [alertView release];
+    //    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
+    //                                                        message:@"We were unable to import your LinkedIn profile. Please check your internet connection and try again." delegate:self 
+    //                                              cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    //    [alertView show];
+    //    [alertView release];
+    
+    [[AlertManager sharedManager] showAlertWithTitle:@"Connection error" 
+                                             message:@"We were unable to import your LinkedIn profile. Please check your internet connection and try again."
+                                            delegate:nil 
+                                   cancelButtonTitle:@"OK" 
+                                   secondButtonTitle:nil];
 }
 
 - (void)requestTokenFromProvider
@@ -322,15 +335,28 @@
                         [pivc release];
                     }
                 } else {
-                    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
-                    [alert show];
-                    [alert release];
+                    [[AlertManager sharedManager] showAlertWithTitle:nil 
+                                                             message:@"Connection Error"
+                                                            delegate:nil 
+                                                   cancelButtonTitle:@"OK" 
+                                                   secondButtonTitle:nil];
+                    
+                    //                    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
+                    //                    [alert show];
+                    //                    [alert release];
                 }
             }];
         } else {
-            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
-            [alert show];
-            [alert release];
+            [[AlertManager sharedManager] showAlertWithTitle:nil 
+                                                     message:@"Connection Error"
+                                                    delegate:nil 
+                                           cancelButtonTitle:@"OK" 
+                                           secondButtonTitle:nil];
+            
+            
+            //            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
+            //            [alert show];
+            //            [alert release];
         }
     }];
 }
