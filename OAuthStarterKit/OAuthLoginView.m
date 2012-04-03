@@ -295,7 +295,7 @@
                     if ([self profileIsValid:aProfileDict] ) {
                         // Profile is valid, so we can map it into managed object
                         NSArray *profileArray = [NSArray arrayWithObject:aProfileDict];
-                        NSArray *mappedObjects = [[DataManager sharedDataManager] mapObjectsFromArray:profileArray toClass:[Profile class]];
+                        NSArray *mappedObjects = [[DataManager sharedDataManager] mapObjectFromArray:profileArray toClass:[Profile class]];
                         Profile *mappedProfile = [mappedObjects lastObject];
                         
                         // And set it as current profile and switch to inApp
