@@ -40,12 +40,6 @@
 
 - (void)showConnectionErrorAlert
 {
-    //    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
-    //                                                        message:@"Please check your internet connection and try again" delegate:self 
-    //                                              cancelButtonTitle:@"OK" otherButtonTitles:nil];
-    //    [alertView show];
-    //    [alertView release];
-    
     [[AlertManager sharedManager] showAlertWithTitle:@"Connection error" 
                                              message:@"Please check your internet connection and try again" 
                                             delegate:nil 
@@ -55,12 +49,6 @@
 
 - (void)showProfileErrorAlert
 {
-    //    UIAlertView* alertView = [[UIAlertView alloc] initWithTitle:@"Connection error"
-    //                                                        message:@"We were unable to import your LinkedIn profile. Please check your internet connection and try again." delegate:self 
-    //                                              cancelButtonTitle:@"OK" otherButtonTitles:nil];
-    //    [alertView show];
-    //    [alertView release];
-    
     [[AlertManager sharedManager] showAlertWithTitle:@"Connection error" 
                                              message:@"We were unable to import your LinkedIn profile. Please check your internet connection and try again."
                                             delegate:nil 
@@ -124,7 +112,7 @@
         [appDelegate.tabBarController setSelectedIndex:0];
     } else {
         [currentProfile deleteLinkedInInfo];
-        [[DataManager sharedDataManager] postProfileToTheServer:currentProfile block:^(NSDictionary *records) {
+        [[DataManager sharedDataManager] postProfileToTheServer:currentProfile shouldPostPhoto:NO block:^(NSDictionary *records) {
             if(records && [records objectForKey:@"status"]) {
                 [self goToInApp];
             } else {
@@ -340,10 +328,6 @@
                                                             delegate:nil 
                                                    cancelButtonTitle:@"OK" 
                                                    secondButtonTitle:nil];
-                    
-                    //                    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
-                    //                    [alert show];
-                    //                    [alert release];
                 }
             }];
         } else {
@@ -352,11 +336,6 @@
                                                     delegate:nil 
                                            cancelButtonTitle:@"OK" 
                                            secondButtonTitle:nil];
-            
-            
-            //            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil message:@"Connection Error" delegate:self cancelButtonTitle:@"OK" otherButtonTitles: nil];
-            //            [alert show];
-            //            [alert release];
         }
     }];
 }
@@ -373,7 +352,7 @@
         [[CacheMan sharedCacheMan] cacheImageData:imageData forURL:pictureUrl cacheName:nil];
     }
     
-    [[DataManager sharedDataManager] postProfileToTheServer:aProfile block: ^(NSDictionary *records) {
+    [[DataManager sharedDataManager] postProfileToTheServer:aProfile shouldPostPhoto:YES block: ^(NSDictionary *records) {
         if(records && [records objectForKey:@"status"]){
             [self.navigationController popToRootViewControllerAnimated:NO];
             AppDelegate *appDelegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];    
