@@ -344,12 +344,8 @@
 {
     NSString *pictureUrl = self.profile.pictureUrl;
     if (pictureUrl.length > 0) {
-        UIImage *image = [[CacheMan sharedCacheMan] cachedImageForURL:[NSURL URLWithString:pictureUrl] cacheName:nil placeholderImage:nil];
-        NSData* imageData = UIImageJPEGRepresentation(image, 1.0);
         NSString *uniqueString = [NSString stringWithFormat:@"%@.jpg", [Utilities stringWithUUID]];
         self.profile.pictureUrl = uniqueString;
-        NSURL *pictureUrl = [NSURL URLWithString:uniqueString];
-        [[CacheMan sharedCacheMan] cacheImageData:imageData forURL:pictureUrl cacheName:nil];
     }
     
     [[DataManager sharedDataManager] postProfileToTheServer:aProfile shouldPostPhoto:YES block: ^(NSDictionary *records) {
